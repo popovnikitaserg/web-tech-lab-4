@@ -219,15 +219,99 @@ function displayWeatherCards(container, weatherData, isToday = false) {
     }
 
     const forecastsByDay = groupForecastsByDay(weatherData.list);
-    const days = Object.keys(forecastsByDay).slice(0, 3);
+    const dayKeys = Object.keys(forecastsByDay);
     
-    days.forEach((day, index) => {
-        const forecasts = forecastsByDay[day];
-        const mainForecast = forecasts[Math.floor(forecasts.length / 2)] || forecasts[0];
+    if (dayKeys.length === 0) {
+        const errorMsg = document.createElement('p');
+        errorMsg.textContent = 'Данные о погоде недоступны';
+        errorMsg.style.color = 'var(--text-secondary)';
+        container.appendChild(errorMsg);
+        return;
+    }
+
+    const todayKey = dayKeys[0];
+    const todayForecasts = forecastsByDay[todayKey];
+    const todayForecast = todayForecasts[Math.floor(todayForecasts.length / 2)] || todayForecasts[0];
+
+    const cardsWrapper = document.createElement('div');
+    cardsWrapper.className = 'weather-cards-wrapper';
+
+    const todayCard = createWeatherCard(todayForecast, todayKey, true, true);
+    cardsWrapper.appendChild(todayCard);
+
+    const selectedDayContainer = document.createElement('div');
+    selectedDayContainer.className = 'selected-day-container';
+
+    const daySelector = document.createElement('div');
+    daySelector.className = 'day-selector';
+
+    const selectorLabel = document.createElement('div');
+    selectorLabel.className = 'day-selector__label';
+    selectorLabel.textContent = 'Выберите день:';
+    
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'day-selector__buttons';
+    buttonsContainer.setAttribute('role', 'group');
+    buttonsContainer.setAttribute('aria-label', 'Выберите день для просмотра прогноза');
+    
+    const futureDays = dayKeys.slice(1, 6);
+    let selectedButton = null;
+    
+    const updateSelectedDayCard = (selectedDayKey) => {
+        const selectedForecasts = forecastsByDay[selectedDayKey];
+        const selectedForecast = selectedForecasts[Math.floor(selectedForecasts.length / 2)] || selectedForecasts[0];
         
-        const card = createWeatherCard(mainForecast, day, index === 0);
-        container.appendChild(card);
-    });
+        const oldCard = selectedDayContainer.querySelector('.weather-card');
+        if (oldCard) {
+            oldCard.remove();
+        }
+        
+        const selectedCard = createWeatherCard(selectedForecast, selectedDayKey, false, false);
+        selectedDayContainer.appendChild(selectedCard);
+    };
+    
+    if (futureDays.length > 0) {
+        futureDays.forEach((dayKey, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'day-selector__button';
+            button.setAttribute('aria-label', `Выбрать ${formatDayLabel(null, index + 1)}`);
+            
+            const dayOffset = index + 1;
+            button.textContent = formatDayLabel(null, dayOffset);
+            button.dataset.dayKey = dayKey;
+            
+            button.addEventListener('click', () => {
+                if (selectedButton) {
+                    selectedButton.classList.remove('active');
+                    selectedButton.setAttribute('aria-pressed', 'false');
+                }
+
+                button.classList.add('active');
+                button.setAttribute('aria-pressed', 'true');
+                selectedButton = button;
+
+                updateSelectedDayCard(dayKey);
+            });
+            
+            buttonsContainer.appendChild(button);
+            
+            if (index === 0) {
+                button.classList.add('active');
+                button.setAttribute('aria-pressed', 'true');
+                selectedButton = button;
+            }
+        });
+        
+        daySelector.appendChild(selectorLabel);
+        daySelector.appendChild(buttonsContainer);
+        selectedDayContainer.appendChild(daySelector);
+        
+        updateSelectedDayCard(futureDays[0]);
+    }
+    
+    cardsWrapper.appendChild(selectedDayContainer);
+    container.appendChild(cardsWrapper);
 }
 
 function groupForecastsByDay(forecasts) {
@@ -251,40 +335,122 @@ function groupForecastsByDay(forecasts) {
     return grouped;
 }
 
-function createWeatherCard(forecast, date, isToday = false) {
+function createWeatherCard(forecast, date, isToday = false, isDetailed = false) {
     const card = document.createElement('div');
-    card.className = `weather-card ${isToday ? 'today' : ''}`;
+    card.className = `weather-card ${isToday ? 'today' : ''} ${isDetailed ? 'detailed' : ''}`;
     card.setAttribute('role', 'listitem');
     
-    const dateLabel = isToday ? 'Сегодня' : date;
+    const dateLabel = isToday ? 'Сегодня' : formatDayLabel(date);
     const temp = Math.round(forecast.main.temp);
     const description = forecast.weather[0].description;
     const humidity = forecast.main.humidity;
     const windSpeed = Math.round(forecast.wind.speed * 10) / 10;
     const pressure = Math.round(forecast.main.pressure * 0.750062);
-    const icon = forecast.weather[0].icon;
+    const feelsLike = Math.round(forecast.main.feels_like);
+    const tempMin = Math.round(forecast.main.temp_min);
+    const tempMax = Math.round(forecast.main.temp_max);
+    const visibility = forecast.visibility ? (forecast.visibility / 1000).toFixed(1) : null;
+    const clouds = forecast.clouds ? forecast.clouds.all : null;
+    
+    let detailsHTML = `
+        <div class="weather-card__detail-item">
+            <span class="weather-card__detail-label">Влажность:</span>
+            <span>${humidity}%</span>
+        </div>
+        <div class="weather-card__detail-item">
+            <span class="weather-card__detail-label">Ветер:</span>
+            <span>${windSpeed} м/с</span>
+        </div>
+        <div class="weather-card__detail-item">
+            <span class="weather-card__detail-label">Давление:</span>
+            <span>${pressure} мм рт.ст.</span>
+        </div>
+    `;
+    
+    if (isDetailed) {
+        detailsHTML += `
+            <div class="weather-card__detail-item">
+                <span class="weather-card__detail-label">Ощущается как:</span>
+                <span>${feelsLike}°C</span>
+            </div>
+            <div class="weather-card__detail-item">
+                <span class="weather-card__detail-label">Мин/Макс:</span>
+                <span>${tempMin}°C / ${tempMax}°C</span>
+            </div>
+        `;
+        
+        if (visibility !== null) {
+            detailsHTML += `
+                <div class="weather-card__detail-item">
+                    <span class="weather-card__detail-label">Видимость:</span>
+                    <span>${visibility} км</span>
+                </div>
+            `;
+        }
+        
+        if (clouds !== null) {
+            detailsHTML += `
+                <div class="weather-card__detail-item">
+                    <span class="weather-card__detail-label">Облачность:</span>
+                    <span>${clouds}%</span>
+                </div>
+            `;
+        }
+    }
     
     card.innerHTML = `
         <div class="weather-card__date">${dateLabel}</div>
         <div class="weather-card__temp">${temp}°C</div>
         <div class="weather-card__description">${description}</div>
         <div class="weather-card__details">
-            <div class="weather-card__detail-item">
-                <span class="weather-card__detail-label">Влажность:</span>
-                <span>${humidity}%</span>
-            </div>
-            <div class="weather-card__detail-item">
-                <span class="weather-card__detail-label">Ветер:</span>
-                <span>${windSpeed} м/с</span>
-            </div>
-            <div class="weather-card__detail-item">
-                <span class="weather-card__detail-label">Давление:</span>
-                <span>${pressure} мм рт.ст.</span>
-            </div>
+            ${detailsHTML}
         </div>
     `;
     
     return card;
+}
+
+function formatDayLabel(dateString, dayOffset = null) {
+    const date = new Date();
+    if (dayOffset !== null) {
+        date.setDate(date.getDate() + dayOffset);
+    } else {
+        const parts = dateString.split(' ');
+        if (parts.length >= 3) {
+            const day = parseInt(parts[0]);
+            const monthNames = {
+                'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
+                'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11
+            };
+            const month = monthNames[parts[1].toLowerCase()];
+            const year = parseInt(parts[2]);
+            if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+                date.setFullYear(year, month, day);
+            }
+        }
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = targetDate - today;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        return 'Сегодня';
+    } else if (diffDays === 1) {
+        return 'Завтра';
+    } else if (diffDays === 2) {
+        return 'Послезавтра';
+    } else {
+        return date.toLocaleDateString('ru-RU', { 
+            weekday: 'long',
+            day: 'numeric', 
+            month: 'long'
+        });
+    }
 }
 
 function createCitySection(cityName, weatherData) {
