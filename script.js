@@ -37,6 +37,8 @@ function init() {
     loadState();
     setupEventListeners();
     
+    updateFavicon('Clear', '01d');
+    
     if (appState.currentLocation) {
         loadCurrentLocationWeather();
     } else {
@@ -106,6 +108,11 @@ async function loadCurrentLocationWeather() {
             weatherData,
             true
         );
+        
+        if (weatherData.list && weatherData.list.length > 0) {
+            const currentWeather = weatherData.list[0];
+            updateFavicon(currentWeather.weather[0].main, currentWeather.weather[0].icon);
+        }
         
         elements.currentLocationSection.style.display = 'block';
         hideLoading();
@@ -529,6 +536,54 @@ function showCityError(message) {
 function hideCityError() {
     elements.cityError.textContent = '';
     elements.cityInput.setAttribute('aria-invalid', 'false');
+}
+
+function updateFavicon(weatherMain, weatherIcon) {
+    const favicon = document.getElementById('favicon');
+    if (!favicon) {
+        console.warn('Favicon element not found');
+        return;
+    }
+    
+    let iconFileName = 'sun.png';
+    
+    const iconCode = weatherIcon ? weatherIcon.substring(0, 2) : '01';
+    const isDay = weatherIcon && weatherIcon.endsWith('d');
+    
+    if (weatherMain === 'Clear' || iconCode === '01') {
+        iconFileName = 'sun.png';
+    } else if (weatherMain === 'Rain' || iconCode === '09' || iconCode === '10') {
+        iconFileName = 'rain.png';
+    } else if (weatherMain === 'Snow' || iconCode === '13') {
+        iconFileName = 'snow.png';
+    } else if (weatherMain === 'Thunderstorm' || iconCode === '11') {
+        iconFileName = 'thunderstorm.png';
+    } else if (weatherMain === 'Clouds' || iconCode === '02' || iconCode === '03' || iconCode === '04') {
+        if (isDay && iconCode === '02') {
+            iconFileName = 'partly-cloudy.png';
+        } else {
+            iconFileName = 'clouds.png';
+        }
+    } else if (weatherMain === 'Mist' || weatherMain === 'Fog' || weatherMain === 'Haze' || iconCode === '50') {
+        iconFileName = 'fog.png';
+    }
+    
+    const newHref = `images/${iconFileName}?t=${Date.now()}`;
+
+    const link = document.createElement('link');
+    link.id = 'favicon';
+    link.rel = 'icon';
+    link.type = 'image/png';
+    link.href = newHref;
+    
+    const oldLink = document.getElementById('favicon');
+    if (oldLink && oldLink.parentNode) {
+        oldLink.parentNode.removeChild(oldLink);
+    }
+    
+    document.head.appendChild(link);
+    
+    console.log('Favicon updated to:', newHref);
 }
 
 if (document.readyState === 'loading') {
