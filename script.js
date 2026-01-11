@@ -336,79 +336,73 @@ function groupForecastsByDay(forecasts) {
 }
 
 function createWeatherCard(forecast, date, isToday = false, isDetailed = false) {
-    const card = document.createElement('div');
-    card.className = `weather-card ${isToday ? 'today' : ''} ${isDetailed ? 'detailed' : ''}`;
-    card.setAttribute('role', 'listitem');
-    
-    const dateLabel = isToday ? 'Сегодня' : formatDayLabel(date);
-    const temp = Math.round(forecast.main.temp);
-    const description = forecast.weather[0].description;
-    const humidity = forecast.main.humidity;
-    const windSpeed = Math.round(forecast.wind.speed * 10) / 10;
-    const pressure = Math.round(forecast.main.pressure * 0.750062);
-    const feelsLike = Math.round(forecast.main.feels_like);
-    const tempMin = Math.round(forecast.main.temp_min);
-    const tempMax = Math.round(forecast.main.temp_max);
-    const visibility = forecast.visibility ? (forecast.visibility / 1000).toFixed(1) : null;
-    const clouds = forecast.clouds ? forecast.clouds.all : null;
-    
-    let detailsHTML = `
-        <div class="weather-card__detail-item">
-            <span class="weather-card__detail-label">Влажность:</span>
-            <span>${humidity}%</span>
-        </div>
-        <div class="weather-card__detail-item">
-            <span class="weather-card__detail-label">Ветер:</span>
-            <span>${windSpeed} м/с</span>
-        </div>
-        <div class="weather-card__detail-item">
-            <span class="weather-card__detail-label">Давление:</span>
-            <span>${pressure} мм рт.ст.</span>
-        </div>
-    `;
-    
-    if (isDetailed) {
-        detailsHTML += `
-            <div class="weather-card__detail-item">
-                <span class="weather-card__detail-label">Ощущается как:</span>
-                <span>${feelsLike}°C</span>
-            </div>
-            <div class="weather-card__detail-item">
-                <span class="weather-card__detail-label">Мин/Макс:</span>
-                <span>${tempMin}°C / ${tempMax}°C</span>
-            </div>
-        `;
-        
-        if (visibility !== null) {
-            detailsHTML += `
-                <div class="weather-card__detail-item">
-                    <span class="weather-card__detail-label">Видимость:</span>
-                    <span>${visibility} км</span>
-                </div>
-            `;
-        }
-        
-        if (clouds !== null) {
-            detailsHTML += `
-                <div class="weather-card__detail-item">
-                    <span class="weather-card__detail-label">Облачность:</span>
-                    <span>${clouds}%</span>
-                </div>
-            `;
-        }
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  };
+
+  const createDetailItem = (labelText, valueText) => {
+    const item = el("div", "weather-card__detail-item");
+
+    const label = el("span", "weather-card__detail-label", labelText);
+    const value = el("span", null, valueText);
+
+    item.append(label, value);
+    return item;
+  };
+
+  const card = document.createElement("div");
+  card.className = `weather-card ${isToday ? "today" : ""} ${isDetailed ? "detailed" : ""}`.trim();
+  card.setAttribute("role", "listitem");
+
+  const dateLabel = isToday ? "Сегодня" : formatDayLabel(date);
+  const temp = Math.round(forecast.main.temp);
+  const description = forecast.weather[0].description;
+
+  const humidity = forecast.main.humidity;
+  const windSpeed = Math.round(forecast.wind.speed * 10) / 10;
+  const pressure = Math.round(forecast.main.pressure * 0.750062);
+
+  const feelsLike = Math.round(forecast.main.feels_like);
+  const tempMin = Math.round(forecast.main.temp_min);
+  const tempMax = Math.round(forecast.main.temp_max);
+
+  const visibility = forecast.visibility ? (forecast.visibility / 1000).toFixed(1) : null;
+  const clouds = forecast.clouds ? forecast.clouds.all : null;
+
+  const dateNode = el("div", "weather-card__date", dateLabel);
+  const tempNode = el("div", "weather-card__temp", `${temp}°C`);
+  const descNode = el("div", "weather-card__description", description);
+
+  const detailsNode = el("div", "weather-card__details");
+  detailsNode.append(
+    createDetailItem("Влажность:", `${humidity}%`),
+    createDetailItem("Ветер:", `${windSpeed} м/с`),
+    createDetailItem("Давление:", `${pressure} мм рт.ст.`)
+  );
+
+  if (isDetailed) {
+    detailsNode.append(
+      createDetailItem("Ощущается как:", `${feelsLike}°C`),
+      createDetailItem("Мин/Макс:", `${tempMin}°C / ${tempMax}°C`)
+    );
+
+    if (visibility !== null) {
+      detailsNode.append(createDetailItem("Видимость:", `${visibility} км`));
     }
-    
-    card.innerHTML = `
-        <div class="weather-card__date">${dateLabel}</div>
-        <div class="weather-card__temp">${temp}°C</div>
-        <div class="weather-card__description">${description}</div>
-        <div class="weather-card__details">
-            ${detailsHTML}
-        </div>
-    `;
-    
-    return card;
+
+    if (clouds !== null) {
+      detailsNode.append(createDetailItem("Облачность:", `${clouds}%`));
+    }
+  }
+
+  card.append(dateNode, tempNode, descNode, detailsNode);
+
+  return card;
 }
+
 
 function formatDayLabel(dateString, dayOffset = null) {
     const date = new Date();
@@ -454,30 +448,36 @@ function formatDayLabel(dateString, dayOffset = null) {
 }
 
 function createCitySection(cityName, weatherData) {
-    const section = document.createElement('div');
-    section.className = 'city-section';
-    section.dataset.city = cityName;
-    
-    const cardsContainer = document.createElement('div');
-    cardsContainer.className = 'weather-cards';
-    
-    displayWeatherCards(cardsContainer, weatherData, false);
-    
-    section.innerHTML = `
-        <div class="city-section__header">
-            <h3 class="city-section__name">${cityName}</h3>
-            <button class="remove-city-btn" data-city="${cityName}" aria-label="Удалить город ${cityName}">
-                Удалить
-            </button>
-        </div>
-    `;
-    
-    section.appendChild(cardsContainer);
-    
-    const removeBtn = section.querySelector('.remove-city-btn');
-    removeBtn.addEventListener('click', () => removeCity(cityName));
-    
-    return section;
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  };
+
+  const section = document.createElement("div");
+  section.className = "city-section";
+  section.dataset.city = cityName;
+
+  const header = el("div", "city-section__header");
+
+  const title = el("h3", "city-section__name", cityName);
+
+  const removeBtn = el("button", "remove-city-btn", "Удалить");
+  removeBtn.dataset.city = cityName;
+  removeBtn.setAttribute("aria-label", `Удалить город ${cityName}`);
+  removeBtn.type = "button";
+
+  removeBtn.addEventListener("click", () => removeCity(cityName));
+
+  header.append(title, removeBtn);
+
+  const cardsContainer = el("div", "weather-cards");
+  displayWeatherCards(cardsContainer, weatherData, false);
+
+  section.append(header, cardsContainer);
+
+  return section;
 }
 
 async function handleAddCity(e) {
@@ -552,64 +552,82 @@ function removeCity(cityName) {
 }
 
 function handleCityInput(e) {
-    const value = e.target.value.trim().toLowerCase();
-    
-    if (value.length === 0) {
-        elements.autocompleteDropdown.style.display = 'none';
-        hideCityError();
+  const value = e.target.value.trim().toLowerCase();
+
+  if (value.length === 0) {
+    elements.autocompleteDropdown.style.display = "none";
+    elements.autocompleteDropdown.setAttribute("aria-expanded", "false");
+    hideCityError();
+    return;
+  }
+
+  const matches = popularCities
+    .filter((city) => city.toLowerCase().includes(value))
+    .slice(0, 5);
+
+  if (matches.length === 0) {
+    elements.autocompleteDropdown.style.display = "none";
+    elements.autocompleteDropdown.setAttribute("aria-expanded", "false");
+    return;
+  }
+
+  const dropdown = elements.autocompleteDropdown;
+
+  dropdown.replaceChildren();
+
+  const items = [];
+
+  matches.forEach((city, index) => {
+    const item = document.createElement("div");
+    item.className = "autocomplete-item";
+    item.setAttribute("role", "option");
+    item.dataset.city = city;
+    item.tabIndex = 0;
+    item.setAttribute("aria-selected", "false");
+    item.id = `autocomplete-option-${index}`;
+    item.textContent = city;
+
+    item.addEventListener("click", () => selectCity(item.dataset.city));
+
+    item.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        selectCity(item.dataset.city);
         return;
-    }
-    
-    const matches = popularCities.filter(city =>
-        city.toLowerCase().includes(value)
-    ).slice(0, 5);
-    
-    if (matches.length > 0) {
-        elements.autocompleteDropdown.innerHTML = matches.map((city, index) => `
-            <div class="autocomplete-item" 
-                 role="option" 
-                 data-city="${city}" 
-                 tabindex="0"
-                 aria-selected="false"
-                 id="autocomplete-option-${index}">
-                ${city}
-            </div>
-        `).join('');
-        
-        elements.autocompleteDropdown.style.display = 'block';
-        elements.autocompleteDropdown.setAttribute('aria-expanded', 'true');
-        
-        const items = elements.autocompleteDropdown.querySelectorAll('.autocomplete-item');
-        items.forEach((item, index) => {
-            item.addEventListener('click', () => selectCity(item.dataset.city));
-            item.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    selectCity(item.dataset.city);
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const next = items[index + 1] || items[0];
-                    next.focus();
-                    next.setAttribute('aria-selected', 'true');
-                    item.setAttribute('aria-selected', 'false');
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const prev = items[index - 1] || items[items.length - 1];
-                    prev.focus();
-                    prev.setAttribute('aria-selected', 'true');
-                    item.setAttribute('aria-selected', 'false');
-                }
-            });
-            item.addEventListener('mouseenter', () => {
-                items.forEach(i => i.setAttribute('aria-selected', 'false'));
-                item.setAttribute('aria-selected', 'true');
-            });
-        });
-    } else {
-        elements.autocompleteDropdown.style.display = 'none';
-        elements.autocompleteDropdown.setAttribute('aria-expanded', 'false');
-    }
+      }
+
+      if (ev.key === "ArrowDown") {
+        ev.preventDefault();
+        const next = items[index + 1] || items[0];
+        next.focus();
+        next.setAttribute("aria-selected", "true");
+        item.setAttribute("aria-selected", "false");
+        return;
+      }
+
+      if (ev.key === "ArrowUp") {
+        ev.preventDefault();
+        const prev = items[index - 1] || items[items.length - 1];
+        prev.focus();
+        prev.setAttribute("aria-selected", "true");
+        item.setAttribute("aria-selected", "false");
+        return;
+      }
+    });
+
+    item.addEventListener("mouseenter", () => {
+      items.forEach((i) => i.setAttribute("aria-selected", "false"));
+      item.setAttribute("aria-selected", "true");
+    });
+
+    items.push(item);
+    dropdown.appendChild(item);
+  });
+
+  dropdown.style.display = "block";
+  dropdown.setAttribute("aria-expanded", "true");
 }
+
 
 function handleCityInputKeydown(e) {
     if (e.key === 'ArrowDown' && elements.autocompleteDropdown.style.display === 'block') {
