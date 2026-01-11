@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Прогноз погоды</title>
+    <link rel="icon" id="favicon" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="header__title">Прогноз погоды</h1>
+            <button id="refreshBtn" class="refresh-btn" title="Обновить данные" aria-label="Обновить">
+                <span class="refresh-icon">🔄</span>
+            </button>
+        </header>
+
+        <main class="main">
+            <div id="loadingMessage" class="message message--loading" role="status" aria-live="polite" style="display: none;">
+                <span class="message__text">Загрузка данных о погоде...</span>
+            </div>
+
+            <div id="errorMessage" class="message message--error" role="alert" aria-live="assertive" style="display: none;">
+                <span class="message__text" id="errorText"></span>
+            </div>
+
+            <section id="currentLocationSection" class="weather-section" style="display: none;">
+                <h2 class="weather-section__title">Текущее местоположение</h2>
+                <div class="weather-cards" id="currentLocationCards" role="list"></div>
+            </section>
+
+            <section id="additionalCitiesSection" class="weather-section" style="display: none;">
+                <h2 class="weather-section__title">Дополнительные города</h2>
+                <div id="additionalCitiesContainer" class="cities-container"></div>
+            </section>
+            
+            <section id="addCitySection" class="add-city-section">
+                <h2 class="add-city-section__title">Добавить город</h2>
+                <form id="addCityForm" class="add-city-form" novalidate>
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="cityInput" 
+                            class="city-input"
+                            placeholder="Введите название города"
+                            autocomplete="off"
+                            aria-label="Название города"
+                            aria-describedby="cityError"
+                        >
+                        <div id="autocompleteDropdown" class="autocomplete-dropdown" role="listbox" aria-label="Список городов"></div>
+                        <div id="cityError" class="error-text" role="alert" aria-live="polite"></div>
+                    </div>
+                    <button type="submit" class="add-btn" aria-label="Добавить город">
+                        Добавить
+                    </button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
